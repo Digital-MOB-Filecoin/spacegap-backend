@@ -1,0 +1,41 @@
+{
+  "name": "spacegap-backend-prototype",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start:dev": "ts-node src/entrypoints/server.ts",
+    "start": "node dist/entrypoints/server.js",
+    "build": "tsc -p ."
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@glif/filecoin-address": "^1.1.0",
+    "@openworklabs/filecoin-address": "0.0.14",
+    "axios": "^0.21.1",
+    "base-x": "^3.0.8",
+    "big.js": "^6.0.3",
+    "blakejs": "^1.1.0",
+    "bn.js": "^5.2.0",
+    "cbor": "^7.0.5",
+    "chalk": "^4.1.0",
+    "d3": "^6.7.0",
+    "filecoin.js": "0.0.5-alpha",
+    "js-hamt-filecoin": "0.0.20",
+    "js-sha256": "^0.9.0",
+    "tiny-async-pool": "^1.2.0",
+    "winston": "^3.3.3",
+    "ws": "^7.4.5"
+  },
+  "devDependencies": {
+    "@types/big.js": "^6.0.2",
+    "@types/d3": "^6.3.0",
+    "@types/node": "^15.0.1",
+    "@types/winston": "^2.4.4",
+    "@types/ws": "^7.4.2",
+    "ts-node": "^9.1.1",
+    "typescript": "^4.2.4"
+  }
+}
