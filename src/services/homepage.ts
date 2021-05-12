@@ -30,7 +30,21 @@ export const getHomepage = () => {
           price: miners[miner].filrep.price,
           rawPower: miners[miner].filrep.rawPower,
           preCommitsCount: miners[miner].preCommits?.data?.Count,
-          deposits: (miners[miner] as any).deposits?.data?.Available
+          tag: {...miners[miner].filrep.tag},
+          country: miners[miner].filrep.isoCode,
+          deposits: {
+            available: miners[miner].deposits?.data?.Available,
+            balance: miners[miner].deposits?.data?.Balance,
+            lockedFunds: miners[miner].deposits?.data?.LockedFunds,
+            feeDebt: miners[miner].deposits?.data?.FeeDebt || 0,
+            initialPledge: miners[miner].deposits?.data?.InitialPledge || 0,
+            preCommitDeposits: miners[miner].deposits?.data?.PreCommitDeposits || 0,
+          },
+          deadlines: {
+            sectorsCount: miners[miner].deadlines?.data.SectorsCount,
+            activeCount: miners[miner].deadlines?.data.ActiveCount,
+            faultsCount: miners[miner].deadlines?.data.FaultsCount,
+          }
         }
       }
     }, {})

@@ -7,11 +7,15 @@ export type FilRepMiner = {
   verifiedPrice: string,
   isoCode: string,
   region: string,
+  tag: {
+    name: string,
+    verified: boolean,
+  }
 }
 
 export class FilRep {
   static async getMiners(): Promise<FilRepMiner[]> {
-    const response = await axios('https://api.filrep.io/api/v1/miners?limit=100&sortBy=score')
+    const response = await axios('http://api.repsys.d.interplanetary.one/api/v1/miners?limit=100&sortBy=score')
     return response.data.miners.map(miner => ({
       address: miner.address,
       price: miner.price,
@@ -21,6 +25,7 @@ export class FilRep {
       region: miner.region,
       score: miner.score,
       rank: miner.rank,
+      tag: miner.tag,
     }));
   }
 }
