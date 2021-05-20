@@ -1,7 +1,7 @@
 import {database} from "../adapters/database";
 
 export const getHomepage = () => {
-  const { genesisActors: actors, last24hActors, economics, head, miners } = database;
+  const { genesisActors: actors, last24hActors, economics, head, miners, gas } = database;
 
   return {
     head,
@@ -55,6 +55,7 @@ export const getHomepage = () => {
           }
         }
       }
-    }, {})
+    }, {}),
+    gas,
   }
 }

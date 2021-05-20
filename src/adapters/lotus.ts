@@ -1,5 +1,5 @@
 import {LotusClient, WsJsonRpcConnector} from "filecoin.js";
-import {TipSet} from "filecoin.js/builds/dist/providers/Types";
+import {Cid, TipSet} from "filecoin.js/builds/dist/providers/Types";
 import * as d3 from "d3";
 import {buildObject, bytesToBig} from "../hamt";
 import Big from "big.js";
@@ -25,7 +25,9 @@ function b64ToBn (b64) {
 }
 
 export class Lotus {
-  private client: LotusClient
+  client: LotusClient
+  parents = {}
+  receipts = {}
 
   public constructor() {
     this.client = new LotusClient(new WsJsonRpcConnector({
@@ -166,6 +168,41 @@ export class Lotus {
     return client.state.minerInfo(miner, head.Cids)
   }
 
+  async parentMessages (cid: Cid) {
+    if (cid['/'] in this.parents) {
+      return this.parents[cid['/']]
+    }
+    const msgs = await this.client.chain.getParentMessages(cid)
+    this.parents[cid['/']] = msgs
+    return msgs
+  }
+
+  async receiptParentMessages (cid: Cid) {
+    if (cid['/'] in this.receipts) {
+      return this.receipts[cid['/']]
+    }
+    const r = await this.client.chain.getParentReceipts(cid)
+    this.receipts[cid['/']] = r
+    return r
+  }
+
+  async parentAndReceiptsMessages (cid, ...methods) {
+    const msgs = await this.parentMessages(cid)
+    const receipts = await this.receiptParentMessages(cid)
+    if (msgs.length != receipts.length) {
+      throw new Error('invalid length')
+    }
+    return zip(msgs, receipts).filter(entry => {
+      const [tx, r] = entry
+      const exit = r.ExitCode == 0
+      var inMethod = true
+      if (methods.length > 0) {
+        inMethod = methods.includes(tx.Message.Method)
+      }
+      return exit && inMethod
+    })
+  }
+
   async getMinerData(
     oldMinerData = {},
     miner,
@@ -231,4 +268,8 @@ export class Lotus {
       }
     }), {})
   }
+}
+
+const zip = (arr, ...arrs) => {
+  return arr.map((val, i) => arrs.reduce((a, arr) => [...a, arr[i]], [val]))
 }

@@ -12,6 +12,7 @@ import {Filfox} from "../adapters/filfox";
 import {computeEconomics} from "./economics";
 import EventEmitter from "events";
 import {FilRep} from "../adapters/filrep";
+import {GasService} from "./gas";
 
 export enum ServiceEvent {
   DataReloaded = 'DataReloaded',
@@ -35,6 +36,7 @@ export class Service extends EventEmitter {
     const lotus = new Lotus()
     const head = await lotus.getHead();
     await setHead(head)
+    await GasService.growth(head, lotus);
     // const filfoxMiners = await Filfox.getMiners()
     // await setFilfoxMiners(filfoxMiners)
     const filrepMiners = await FilRep.getMiners();
