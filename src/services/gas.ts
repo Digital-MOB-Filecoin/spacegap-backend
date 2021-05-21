@@ -1,12 +1,13 @@
 import {Lotus} from "../adapters/lotus";
 import {TipSet} from "filecoin.js/builds/dist/providers/Types";
-import {setBiggestUsers, setGasGrowth} from "../adapters/database";
+import {setBiggestUsers, setGasGrowth, setUsage} from "../adapters/database";
 
 let commits = {}
 let wposts = {}
 const maxCommits = 20;
 const maxRounds = 30;
 const roundsPerDay = 2 * 60 * 24
+const blockLimit = 5 * 10 ** 9
 const maxSectorsPerPost = 2349
 const maxUser = 10
 
@@ -70,6 +71,52 @@ export class GasService {
     wposts = filteredPosts;
     await setGasGrowth({dataCommits, dataWposts, rounds})
   }
+
+  public async usage() {
+    const data: any = {}
+    const totalUsed = await this.stats.avgTotal(msgToGasUsed)
+    const totalLimit = await this.stats.avgTotal(msgToGasLimit)
+    data.total = await this.computeEntry(totalUsed, totalLimit)
+    data.wpost = await this.computeEntry(totalUsed, totalLimit, 5)
+    data.pre = await this.computeEntry(totalUsed, totalLimit, 6)
+    data.prove = await this.computeEntry(totalUsed, totalLimit, 7)
+    await setUsage(data);
+  }
+
+  async computeEntry(totalUsed: number, totalLimit: number, ...method) {
+    const nTx = await this.stats.avgNumberTx(...method)
+    const gasUsed = await this.stats.avgValue(msgToGasUsed,...method)
+    const gasLimit = await this.stats.avgValue(msgToGasLimit,...method)
+    const mtotalUsed = await this.stats.avgTotal(msgToGasUsed, ...method)
+    const mtotalLimit = await this.stats.avgTotal(msgToGasLimit, ...method)
+    const ratioUsed = mtotalUsed / totalUsed
+    const ratioLimit = mtotalLimit / totalLimit
+    const ratioUsedLimit = mtotalUsed / mtotalLimit
+    const ratioUsedBlockLimit = await this.stats.avgTotalGasUsedOverTipsetLimit(
+      ...method
+    )
+    const ratioBlockLimit = await this.stats.avgTotalGasLimitOverTipsetLimit(
+      ...method
+    )
+    return [
+      nTx,
+      gasUsed,
+      ratioUsed,
+      gasLimit,
+      ratioLimit,
+      ratioUsedLimit,
+      ratioUsedBlockLimit,
+      ratioBlockLimit
+    ]
+  }
+}
+
+export function msgToGasUsed(m) {
+  return m[1].GasUsed
+}
+
+export function msgToGasLimit(m) {
+  return m[0].Message.GasLimit
 }
 
 export class Stats {
@@ -84,6 +131,38 @@ export class Stats {
     for (let i = 1; i < this.average; i++) {
       const tipset = await this.lotus.client.chain.getTipSetByHeight(this.head.Height - i)
       this.tipsets[tipset.Height] = tipset
+    }
+  }
+
+  async avgTotal(cb, ...method) {
+    var avg = [];
+    await this.msgsPerHeight((msgs) => {
+      avg.push(msgs.reduce((acc,m) => acc + cb(m), 0))
+    },...method)
+    return avg.reduce((acc,v) => v,0) / avg.length
+  }
+
+  async avgNumberTx (...method) {
+    const tx = await this.transactions(...method)
+    return tx.length / Object.keys(this.tipsets).length
+  }
+
+  async avgValue(cb, ...method) {
+    var avg = 0;
+    await this.msgsPerHeight((msgs) => {
+      if (msgs.length < 1) {
+        return
+      }
+      avg += msgs.reduce((acc,m) => acc + cb(m), 0) / msgs.length
+    },...method)
+    return avg / Object.keys(this.tipsets).length
+  }
+
+  async msgsPerHeight(cb, ...method)  {
+    for (var height in this.tipsets) {
+      const tipset = this.tipsets[height]
+      const msgs = await this.lotus.parentAndReceiptsMessages(tipset.Cids[0], ...method);
+      cb(msgs,height)
     }
   }
 
@@ -124,6 +203,39 @@ export class Stats {
       datas[height] = sorted
     }
     return datas
+  }
+
+  // return the avg total gas limit set per height for the given method over
+  // the maximal theoretical gas limit
+  async avgTotalGasLimitOverTipsetLimit (...method) {
+    var ratios = []
+    await this.msgsPerHeight((msgs,height) => {
+      const tipset = this.tipsets[height]
+      const totalGasLimit = msgs.reduce(
+        (total, tup) => total + tup[0].Message.GasLimit,
+        0
+      )
+      const nbBlocks = tipset.Cids.length
+      const ratio = totalGasLimit / (blockLimit * nbBlocks)
+      ratios.push(ratio)
+    },...method)
+    // make the average
+    return ratios.reduce((acc, v) => acc + v, 0) / ratios.length
+  }
+
+  async avgTotalGasUsedOverTipsetLimit (...method) {
+    var ratios = []
+    await this.msgsPerHeight((msgs,height) => {
+      const totalGasUsed = msgs.reduce(
+        (total, tup) => total + tup[1].GasUsed,
+        0
+      )
+      const nbBlocks = this.tipsets[height].Cids.length
+      const ratio = totalGasUsed / (blockLimit * nbBlocks)
+      ratios.push(ratio)
+    },...method)
+    // make the average
+    return ratios.reduce((acc, v) => acc + v, 0) / ratios.length
   }
 }
 

@@ -40,6 +40,7 @@ export class Service extends EventEmitter {
     await gasService.initStats();
     await gasService.growth();
     await gasService.biggestUsers()
+    await gasService.usage();
     // const filfoxMiners = await Filfox.getMiners()
     // await setFilfoxMiners(filfoxMiners)
     const filrepMiners = await FilRep.getMiners();

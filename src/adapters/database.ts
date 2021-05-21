@@ -22,6 +22,12 @@ type Database = {
       data: {
         [miner: string]: number,
       }
+    },
+    usage: {
+      total: number[],
+      wpost: number[],
+      pre: number[],
+      prove: number[],
     }
   }
 }
@@ -41,6 +47,12 @@ export const database: Database = {
     biggestUsers: {
       height: '',
       data: {},
+    },
+    usage: {
+      pre: [],
+      total: [],
+      prove: [],
+      wpost: []
     }
   }
 }
@@ -113,13 +125,14 @@ export const setMinerData = async (miner: string, data: any) => {
   await fs.writeFile('database.json', Buffer.from(JSON.stringify(database, null, 2)));
 }
 
-export const setGasGrowth = async ({
-                                     dataCommits, dataWposts, rounds
-                                   }: {
-  dataCommits: number[],
-  dataWposts: number[],
-  rounds: any[],
-}) => {
+export const setGasGrowth = async (
+  {
+    dataCommits, dataWposts, rounds
+  }: {
+    dataCommits: number[],
+    dataWposts: number[],
+    rounds: any[],
+  }) => {
   database.gas.growth = { dataCommits, dataWposts, rounds }
   await fs.writeFile('database.json', Buffer.from(JSON.stringify(database, null, 2)));
 }
@@ -129,5 +142,10 @@ export const setBiggestUsers = async (height: string, biggestUsers: {[miner: str
     height,
     data: biggestUsers || {}
   }
+  await fs.writeFile('database.json', Buffer.from(JSON.stringify(database, null, 2)));
+}
+
+export const setUsage = async ({ pre, total, prove, wpost }: { pre: [], total: [], prove: [], wpost: [] }) => {
+  database.gas.usage = { pre: pre || [], total: total || [], prove: prove || [], wpost: wpost || [] }
   await fs.writeFile('database.json', Buffer.from(JSON.stringify(database, null, 2)));
 }
