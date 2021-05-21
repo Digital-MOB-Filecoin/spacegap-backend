@@ -16,6 +16,12 @@ type Database = {
       dataCommits: number[],
       dataWposts: number[],
       rounds: any[],
+    },
+    biggestUsers: {
+      height: string,
+      data: {
+        [miner: string]: number,
+      }
     }
   }
 }
@@ -31,6 +37,10 @@ export const database: Database = {
       dataCommits: [],
       dataWposts: [],
       rounds: [],
+    },
+    biggestUsers: {
+      height: '',
+      data: {},
     }
   }
 }
@@ -104,12 +114,20 @@ export const setMinerData = async (miner: string, data: any) => {
 }
 
 export const setGasGrowth = async ({
-    dataCommits, dataWposts, rounds
-  }: {
-    dataCommits: number[],
-    dataWposts: number[],
-    rounds: any[],
-  }) => {
+                                     dataCommits, dataWposts, rounds
+                                   }: {
+  dataCommits: number[],
+  dataWposts: number[],
+  rounds: any[],
+}) => {
   database.gas.growth = { dataCommits, dataWposts, rounds }
+  await fs.writeFile('database.json', Buffer.from(JSON.stringify(database, null, 2)));
+}
+
+export const setBiggestUsers = async (height: string, biggestUsers: {[miner: string]: number}) => {
+  database.gas.biggestUsers = {
+    height,
+    data: biggestUsers || {}
+  }
   await fs.writeFile('database.json', Buffer.from(JSON.stringify(database, null, 2)));
 }

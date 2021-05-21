@@ -36,7 +36,10 @@ export class Service extends EventEmitter {
     const lotus = new Lotus()
     const head = await lotus.getHead();
     await setHead(head)
-    await GasService.growth(head, lotus);
+    const gasService = new GasService(head, lotus);
+    await gasService.initStats();
+    await gasService.growth();
+    await gasService.biggestUsers()
     // const filfoxMiners = await Filfox.getMiners()
     // await setFilfoxMiners(filfoxMiners)
     const filrepMiners = await FilRep.getMiners();
