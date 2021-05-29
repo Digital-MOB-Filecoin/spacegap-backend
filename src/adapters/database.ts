@@ -1,7 +1,33 @@
 import {TipSet} from "filecoin.js/builds/dist/providers/Types";
 import fs from 'fs/promises'
-import {FilfoxMiner, FilfoxMiners} from "./filfox";
+import {FilfoxMiner} from "./filfox";
 import {FilRepMiner} from "./filrep";
+import {Db, MongoClient} from "mongodb";
+
+export class MongoDbRepository {
+  private client: MongoClient;
+  private db: Db;
+
+  constructor(url: string) {
+    this.client = new MongoClient(url)
+  }
+
+  async connect(database: string) {
+    await this.client.connect();
+    this.db = this.client.db(database)
+  }
+
+  async disconnect() {
+    await this.client.close();
+    this.client = undefined;
+    this.db = undefined;
+  }
+
+  async saveHead(head: TipSet) {
+    const dbHead = this.db.collection('head');
+    const result = await dbHead.insertOne(head);
+  }
+}
 
 type Database = {
   head?: TipSet,
@@ -72,6 +98,10 @@ type DatabaseMiner = {
     error: boolean,
     data: any,
   },
+  prevDeadlines: {
+    error: boolean,
+    data: any,
+  },
   stateInfo: {
     error: boolean,
     data: any,
@@ -80,7 +110,6 @@ type DatabaseMiner = {
 
 export const setHead = async (head: TipSet) => {
   database.head = head
-  await fs.writeFile('database.json', Buffer.from(JSON.stringify(database, null, 2)));
 }
 
 export const setFilfoxMiners = async (miners: FilfoxMiner[]) => {
@@ -91,7 +120,6 @@ export const setFilfoxMiners = async (miners: FilfoxMiner[]) => {
       filfox: miners[miner.address],
     }
   }
-  await fs.writeFile('database.json', Buffer.from(JSON.stringify(database, null, 2)));
 }
 
 export const setFilRepMiners = async (miners: FilRepMiner[]) => {
@@ -102,22 +130,18 @@ export const setFilRepMiners = async (miners: FilRepMiner[]) => {
       filrep: miner,
     }
   }
-  await fs.writeFile('database.json', Buffer.from(JSON.stringify(database, null, 2)));
 }
 
 export const setGenesisActors = async (genesisActors: any) => {
   database.genesisActors = genesisActors
-  await fs.writeFile('database.json', Buffer.from(JSON.stringify(database, null, 2)));
 }
 
 export const setLast24hActors = async (last24hActors: any) => {
   database.last24hActors = last24hActors
-  await fs.writeFile('database.json', Buffer.from(JSON.stringify(database, null, 2)));
 }
 
 export const setEconomics = async (economics: any) => {
   database.economics = economics
-  await fs.writeFile('database.json', Buffer.from(JSON.stringify(database, null, 2)));
 }
 
 export const setMinerData = async (miner: string, data: any) => {
@@ -134,7 +158,6 @@ export const setGasGrowth = async (
     rounds: any[],
   }) => {
   database.gas.growth = { dataCommits, dataWposts, rounds }
-  await fs.writeFile('database.json', Buffer.from(JSON.stringify(database, null, 2)));
 }
 
 export const setBiggestUsers = async (height: string, biggestUsers: {[miner: string]: number}) => {
@@ -142,10 +165,9 @@ export const setBiggestUsers = async (height: string, biggestUsers: {[miner: str
     height,
     data: biggestUsers || {}
   }
-  await fs.writeFile('database.json', Buffer.from(JSON.stringify(database, null, 2)));
 }
 
 export const setUsage = async ({ pre, total, prove, wpost }: { pre: [], total: [], prove: [], wpost: [] }) => {
   database.gas.usage = { pre: pre || [], total: total || [], prove: prove || [], wpost: wpost || [] }
-  await fs.writeFile('database.json', Buffer.from(JSON.stringify(database, null, 2)));
+  // await fs.writeFile('database.json', Buffer.from(JSON.stringify(database, null, 2)));
 }

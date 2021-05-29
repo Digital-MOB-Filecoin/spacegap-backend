@@ -6,13 +6,15 @@ import {
   setLast24hActors,
   setMinerData,
   setFilfoxMiners,
-  setFilRepMiners
+  setFilRepMiners, MongoDbRepository
 } from "../adapters/database";
 import {Filfox} from "../adapters/filfox";
 import {computeEconomics} from "./economics";
 import EventEmitter from "events";
-import {FilRep} from "../adapters/filrep";
+import {FilRep, FilRepMiner} from "../adapters/filrep";
 import {GasService} from "./gas";
+import {TipSet} from "filecoin.js/builds/dist/providers/Types";
+import {splitArray} from "./utils";
 
 export enum ServiceEvent {
   DataReloaded = 'DataReloaded',
@@ -22,19 +24,14 @@ export class Service extends EventEmitter {
   public async run() {
     await this.getData();
     this.emit(ServiceEvent.DataReloaded)
-    await this.wait(60);
+    await this.wait(10);
     await this.run()
   }
 
   private async getData() {
-    async function getMinerData (miner) {
-      return {
-        miner: miner.address,
-        data: await lotus.getMinerData({}, miner.address, head, {deadlines: true})
-      }
-    }
     const lotus = new Lotus()
     const head = await lotus.getHead();
+    const prevHead = await lotus.getLast24hHead(head);
     await setHead(head)
     const gasService = new GasService(head, lotus);
     await gasService.initStats();
@@ -47,16 +44,31 @@ export class Service extends EventEmitter {
     await setFilRepMiners(filrepMiners)
     const genesisActors = await lotus.getGenesisActors(head)
     await setGenesisActors(genesisActors)
-    await setLast24hActors(await lotus.getLast24hActors(head))
+
+    await setLast24hActors(await lotus.getGenesisActors(prevHead))
     const economics = computeEconomics(head, genesisActors, { projectedDays: 1 })
     await setEconomics(economics)
 
-    const data = await Promise.all(filrepMiners.map(
-      miner => getMinerData(miner)
-    ))
+    await this.getMinersData(lotus, head, prevHead, filrepMiners);
+  }
 
-    for (const dataItem of data) {
+  private async getMinersData(lotus: Lotus, head: TipSet, prevHead: TipSet, miners: FilRepMiner[]) {
+    const chunksOfMiners = splitArray(miners, 50);
+    let minersData = [];
+
+    for (const chunkOfMiners of chunksOfMiners) {
+      minersData.push(...(await Promise.all(chunkOfMiners.map(miner => this.getMinerData(lotus, head, prevHead, miner)))));
+    }
+
+    for (const dataItem of minersData) {
       await setMinerData(dataItem.miner, dataItem.data)
+    }
+  }
+
+  async getMinerData (lotus: Lotus, head: TipSet, prevHead: TipSet, miner: FilRepMiner) {
+    return {
+      miner: miner.address,
+      data: await lotus.getMinerData({}, miner.address, head, prevHead, {deadlines: true})
     }
   }
 

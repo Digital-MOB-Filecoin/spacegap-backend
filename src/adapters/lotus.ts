@@ -53,10 +53,10 @@ export class Lotus {
     return { Supply, Reward, Power, Market, Burnt, SupplyVM }
   }
 
-  public async getLast24hActors(head: TipSet) {
+  public async getLast24hHead(head: TipSet) {
     const height = head.Height - 2880
     const head24 = await this.client.chain.getTipSetByHeight(height)
-    return this.getGenesisActors(head24)
+    return head24;
   }
 
   public async release() {
@@ -207,6 +207,7 @@ export class Lotus {
     oldMinerData = {},
     miner,
     head,
+    prevHead,
     filter = { deadlines: true }
   ) {
     let minerData: any = oldMinerData;
@@ -224,6 +225,15 @@ export class Lotus {
         minerData = {...minerData, deadlines: { error: false, data: deadlines }}
       } catch (e) {
         minerData = {...minerData, deadlines: { error: true, data: undefined }}
+      }
+    }
+
+    if (filter.deadlines) {
+      try {
+        const prevDeadlines = await this.fetchDeadlines(this.client, miner, prevHead)
+        minerData = {...minerData, prevDeadlines: { error: false, data: prevDeadlines }}
+      } catch (e) {
+        minerData = {...minerData, prevDeadlines: { error: true, data: undefined }}
       }
     }
 

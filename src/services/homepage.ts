@@ -64,6 +64,13 @@ export const getHomepage = () => {
             nextDeadlines: miners[miner].deadlines?.data.nextDeadlines,
             deadline: miners[miner].deadlines?.data.deadline,
           },
+          prevDeadlines: {
+            sectorsCount: miners[miner].prevDeadlines?.data.SectorsCount,
+            activeCount: miners[miner].prevDeadlines?.data.ActiveCount,
+            faultsCount: miners[miner].prevDeadlines?.data.FaultsCount,
+            nextDeadlines: miners[miner].prevDeadlines?.data.nextDeadlines,
+            deadline: miners[miner].prevDeadlines?.data.deadline,
+          },
           preCommits: {
             preCommitDeadlines: miners[miner].preCommits?.data?.PreCommitDeadlines,
           }
