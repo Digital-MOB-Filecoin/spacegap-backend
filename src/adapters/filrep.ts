@@ -15,7 +15,7 @@ export type FilRepMiner = {
 
 export class FilRep {
   static async getMiners(): Promise<FilRepMiner[]> {
-    const response = await axios('http://api.filrep.io/api/v1/miners?limit=100&sortBy=score')
+    const response = await axios('http://api.filrep.io/api/v1/miners?limit=300&sortBy=score')
     return response.data.miners.map(miner => ({
       address: miner.address,
       price: miner.price,
