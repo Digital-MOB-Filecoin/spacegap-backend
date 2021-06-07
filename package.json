@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start:dev": "ts-node -r dotenv/config src/entrypoints/server.ts",
-    "start": "ts-node src/entrypoints/server.ts"
+    "start": "node dist/entrypoints/server.js",
+    "build": "tsc -p ."
   },
   "author": "",
   "license": "ISC",
