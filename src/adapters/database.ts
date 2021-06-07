@@ -146,7 +146,6 @@ export const setEconomics = async (economics: any) => {
 
 export const setMinerData = async (miner: string, data: any) => {
   database.miners[miner] = {...database.miners[miner], ...data};
-  await fs.writeFile('database.json', Buffer.from(JSON.stringify(database, null, 2)));
 }
 
 export const setGasGrowth = async (
