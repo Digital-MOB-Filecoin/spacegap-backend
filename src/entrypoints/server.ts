@@ -35,8 +35,16 @@ const startWsServer = async (service: Service) => {
   })
 
   wss.on('connection', function connection(ws) {
+    logger.info('new connection');
+    const start = process.hrtime();
+    const data = getHomepage();
+    const start1 = process.hrtime(start);
+    logger.info(`getHomepage: ${start1[0]}s ${start1[1] / 1000000}ms`)
+    const stringifiedData = JSON.stringify(data);
+    const start2 = process.hrtime(start);
+    logger.info(`stringifiedData: ${start2[0]}s ${start2[1] / 1000000}ms`)
     // here we should make a specific services that retrieves data from db. Like a service for HTTP GET req
-    ws.send(JSON.stringify(getHomepage()))
+    ws.send(stringifiedData)
     // event approach is best, just send data along with the event. A HTTP service would return data, in WS emit it!
     const listener = () => { ws.send(JSON.stringify(getHomepage()))}
     service.on(ServiceEvent.DataReloaded, listener)
