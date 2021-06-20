@@ -42,7 +42,7 @@ export class GasService {
     }
     const sortedHeight = Object.keys(allHeights).sort((a, b) => +b - +a)
     const data = allHeights[sortedHeight[0]].slice(0, maxUser).reduce((acc, tuple) => ({ ...acc, [tuple[0]]: tuple[1] }), {})
-    await setBiggestUsers(sortedHeight[0], data)
+    setBiggestUsers(sortedHeight[0], data)
   }
 
   public async growth() {
@@ -69,7 +69,7 @@ export class GasService {
       .map(w => Math.round(wpostToSectors(w)))
     commits = filteredCommits;
     wposts = filteredPosts;
-    await setGasGrowth({dataCommits, dataWposts, rounds})
+    setGasGrowth({dataCommits, dataWposts, rounds})
   }
 
   public async usage() {
@@ -80,7 +80,7 @@ export class GasService {
     data.wpost = await this.computeEntry(totalUsed, totalLimit, 5)
     data.pre = await this.computeEntry(totalUsed, totalLimit, 6)
     data.prove = await this.computeEntry(totalUsed, totalLimit, 7)
-    await setUsage(data);
+    setUsage(data);
   }
 
   async computeEntry(totalUsed: number, totalLimit: number, ...method) {

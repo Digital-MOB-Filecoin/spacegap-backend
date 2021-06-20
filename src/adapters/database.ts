@@ -1,5 +1,4 @@
 import {TipSet} from "filecoin.js/builds/dist/providers/Types";
-import fs from 'fs/promises'
 import {FilfoxMiner} from "./filfox";
 import {FilRepMiner} from "./filrep";
 import {Db, MongoClient} from "mongodb";
@@ -108,21 +107,11 @@ type DatabaseMiner = {
   }
 }
 
-export const setHead = async (head: TipSet) => {
+export const setHead = (head: TipSet) => {
   database.head = head
 }
 
-export const setFilfoxMiners = async (miners: FilfoxMiner[]) => {
-  for (const miner of miners) {
-    const oldMinerObject = database.miners[miner.address]
-    database.miners[miner.address] = {
-      ...oldMinerObject,
-      filfox: miners[miner.address],
-    }
-  }
-}
-
-export const setFilRepMiners = async (miners: FilRepMiner[]) => {
+export const setFilRepMiners = (miners: FilRepMiner[]) => {
   for (const miner of miners) {
     const oldMinerObject = database.miners[miner.address]
     database.miners[miner.address] = {
@@ -132,24 +121,23 @@ export const setFilRepMiners = async (miners: FilRepMiner[]) => {
   }
 }
 
-export const setGenesisActors = async (genesisActors: any) => {
+export const setGenesisActors = (genesisActors: any) => {
   database.genesisActors = genesisActors
 }
 
-export const setLast24hActors = async (last24hActors: any) => {
+export const setLast24hActors = (last24hActors: any) => {
   database.last24hActors = last24hActors
 }
 
-export const setEconomics = async (economics: any) => {
+export const setEconomics = (economics: any) => {
   database.economics = economics
 }
 
-export const setMinerData = async (miner: string, data: any) => {
+export const setMinerData = (miner: string, data: any) => {
   database.miners[miner] = {...database.miners[miner], ...data};
 }
 
-export const setGasGrowth = async (
-  {
+export const setGasGrowth = ({
     dataCommits, dataWposts, rounds
   }: {
     dataCommits: number[],
@@ -159,14 +147,14 @@ export const setGasGrowth = async (
   database.gas.growth = { dataCommits, dataWposts, rounds }
 }
 
-export const setBiggestUsers = async (height: string, biggestUsers: {[miner: string]: number}) => {
+export const setBiggestUsers = (height: string, biggestUsers: {[miner: string]: number}) => {
   database.gas.biggestUsers = {
     height,
     data: biggestUsers || {}
   }
 }
 
-export const setUsage = async ({ pre, total, prove, wpost }: { pre: [], total: [], prove: [], wpost: [] }) => {
+export const setUsage = ({ pre, total, prove, wpost }: { pre: [], total: [], prove: [], wpost: [] }) => {
   database.gas.usage = { pre: pre || [], total: total || [], prove: prove || [], wpost: wpost || [] }
   // await fs.writeFile('database.json', Buffer.from(JSON.stringify(database, null, 2)));
 }

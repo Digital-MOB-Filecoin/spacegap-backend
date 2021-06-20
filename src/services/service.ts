@@ -1,11 +1,10 @@
 import {Lotus} from "../adapters/lotus";
 import {
-  setEconomics,
-  setGenesisActors,
   setHead,
+  setGenesisActors,
   setLast24hActors,
+  setEconomics,
   setMinerData,
-  setFilfoxMiners,
   setFilRepMiners, MongoDbRepository
 } from "../adapters/database";
 import {Filfox} from "../adapters/filfox";
@@ -17,39 +16,48 @@ import {TipSet} from "filecoin.js/builds/dist/providers/Types";
 import {splitArray} from "./utils";
 
 export enum ServiceEvent {
-  DataReloaded = 'DataReloaded',
+  NewHead = 'NewHead',
+  NewGas = 'NewGas',
+  NewActors = 'NewActors',
+  NewEconomics = 'NewEconomics',
+  NewMiners = 'NewMiners',
 }
 
 export class Service extends EventEmitter {
   public async run() {
     await this.getData();
-    this.emit(ServiceEvent.DataReloaded)
     await this.wait(10);
     await this.run()
   }
 
   private async getData() {
     const lotus = new Lotus()
+
     const head = await lotus.getHead();
     const prevHead = await lotus.getLast24hHead(head);
-    await setHead(head)
+    setHead(head)
+    this.emit(ServiceEvent.NewHead);
+
     const gasService = new GasService(head, lotus);
     await gasService.initStats();
     await gasService.growth();
     await gasService.biggestUsers()
     await gasService.usage();
-    // const filfoxMiners = await Filfox.getMiners()
-    // await setFilfoxMiners(filfoxMiners)
-    const filrepMiners = await FilRep.getMiners();
-    await setFilRepMiners(filrepMiners)
+    this.emit(ServiceEvent.NewGas);
+
     const genesisActors = await lotus.getGenesisActors(head)
     await setGenesisActors(genesisActors)
-
     await setLast24hActors(await lotus.getGenesisActors(prevHead))
+    this.emit(ServiceEvent.NewActors);
+
     const economics = computeEconomics(head, genesisActors, { projectedDays: 1 })
     await setEconomics(economics)
+    this.emit(ServiceEvent.NewEconomics)
 
-    await this.getMinersData(lotus, head, prevHead, filrepMiners);
+    const filrepMiners = await FilRep.getMiners();
+    await setFilRepMiners(filrepMiners)
+    await this.getMinersData(lotus, head, prevHead, filrepMiners)
+    this.emit(ServiceEvent.NewMiners);
   }
 
   private async getMinersData(lotus: Lotus, head: TipSet, prevHead: TipSet, miners: FilRepMiner[]) {

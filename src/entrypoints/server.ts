@@ -1,7 +1,7 @@
 import WebSocket from 'ws';
 import {logger} from "../logger";
 import {Service, ServiceEvent} from "../services/service";
-import {getHomepage} from "../services/homepage";
+import {PageDataService} from "../services/homepage";
 import {MongoDbRepository} from "../adapters/database";
 import {config} from "../../config";
 
@@ -35,20 +35,31 @@ const startWsServer = async (service: Service) => {
   })
 
   wss.on('connection', function connection(ws) {
-    logger.info('new connection');
-    const start = process.hrtime();
-    const data = getHomepage();
-    const start1 = process.hrtime(start);
-    logger.info(`getHomepage: ${start1[0]}s ${start1[1] / 1000000}ms`)
-    const stringifiedData = JSON.stringify(data);
-    const start2 = process.hrtime(start);
-    logger.info(`stringifiedData: ${start2[0]}s ${start2[1] / 1000000}ms`)
-    // here we should make a specific services that retrieves data from db. Like a service for HTTP GET req
-    ws.send(stringifiedData)
-    // event approach is best, just send data along with the event. A HTTP service would return data, in WS emit it!
-    const listener = () => { ws.send(JSON.stringify(getHomepage()))}
-    service.on(ServiceEvent.DataReloaded, listener)
-    ws.onclose = () => { service.removeListener(ServiceEvent.DataReloaded, listener) }
+    ws.send(JSON.stringify(PageDataService.getHead()))
+    ws.send(JSON.stringify(PageDataService.getGas()))
+    ws.send(JSON.stringify(PageDataService.getActors()))
+    ws.send(JSON.stringify(PageDataService.getEconomics()))
+    ws.send(JSON.stringify(PageDataService.getMiners()))
+
+    const listenerHead = () => { ws.send(JSON.stringify(PageDataService.getHead())) }
+    const listenerGas = () => { ws.send(JSON.stringify(PageDataService.getGas())) }
+    const listenerActors = () => { ws.send(JSON.stringify(PageDataService.getActors())) }
+    const listenerEconomics = () => { ws.send(JSON.stringify(PageDataService.getEconomics())) }
+    const listenerMiners = () => { ws.send(JSON.stringify(PageDataService.getMiners())) }
+
+    service.on(ServiceEvent.NewHead, listenerHead)
+    service.on(ServiceEvent.NewGas, listenerGas)
+    service.on(ServiceEvent.NewActors, listenerActors)
+    service.on(ServiceEvent.NewEconomics, listenerEconomics)
+    service.on(ServiceEvent.NewMiners, listenerMiners)
+
+    ws.onclose = () => {
+      service.removeListener(ServiceEvent.NewHead, listenerHead)
+      service.removeListener(ServiceEvent.NewGas, listenerGas)
+      service.removeListener(ServiceEvent.NewActors, listenerActors)
+      service.removeListener(ServiceEvent.NewEconomics, listenerEconomics)
+      service.removeListener(ServiceEvent.NewMiners, listenerMiners)
+    }
   });
 }
 
