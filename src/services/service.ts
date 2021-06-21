@@ -14,6 +14,7 @@ import {FilRep, FilRepMiner} from "../adapters/filrep";
 import {GasService} from "./gas";
 import {TipSet} from "filecoin.js/builds/dist/providers/Types";
 import {splitArray} from "./utils";
+import {logger} from "../logger";
 
 export enum ServiceEvent {
   NewHead = 'NewHead',
@@ -25,39 +26,44 @@ export enum ServiceEvent {
 
 export class Service extends EventEmitter {
   public async run() {
-    await this.getData();
-    await this.wait(10);
-    await this.run()
+    while(true) {
+      await this.getData();
+      await this.wait(10);
+    }
   }
 
   private async getData() {
-    const lotus = new Lotus()
+    try {
+      const lotus = new Lotus()
 
-    const head = await lotus.getHead();
-    const prevHead = await lotus.getLast24hHead(head);
-    setHead(head)
-    this.emit(ServiceEvent.NewHead);
+      const head = await lotus.getHead();
+      const prevHead = await lotus.getLast24hHead(head);
+      setHead(head)
+      this.emit(ServiceEvent.NewHead);
 
-    const gasService = new GasService(head, lotus);
-    await gasService.initStats();
-    await gasService.growth();
-    await gasService.biggestUsers()
-    await gasService.usage();
-    this.emit(ServiceEvent.NewGas);
+      const gasService = new GasService(head, lotus);
+      await gasService.initStats();
+      await gasService.growth();
+      await gasService.biggestUsers()
+      await gasService.usage();
+      this.emit(ServiceEvent.NewGas);
 
-    const genesisActors = await lotus.getGenesisActors(head)
-    await setGenesisActors(genesisActors)
-    await setLast24hActors(await lotus.getGenesisActors(prevHead))
-    this.emit(ServiceEvent.NewActors);
+      const genesisActors = await lotus.getGenesisActors(head)
+      await setGenesisActors(genesisActors)
+      await setLast24hActors(await lotus.getGenesisActors(prevHead))
+      this.emit(ServiceEvent.NewActors);
 
-    const economics = computeEconomics(head, genesisActors, { projectedDays: 1 })
-    await setEconomics(economics)
-    this.emit(ServiceEvent.NewEconomics)
+      const economics = computeEconomics(head, genesisActors, { projectedDays: 1 })
+      await setEconomics(economics)
+      this.emit(ServiceEvent.NewEconomics)
 
-    const filrepMiners = await FilRep.getMiners();
-    await setFilRepMiners(filrepMiners)
-    await this.getMinersData(lotus, head, prevHead, filrepMiners)
-    this.emit(ServiceEvent.NewMiners);
+      const filrepMiners = await FilRep.getMiners();
+      await setFilRepMiners(filrepMiners)
+      await this.getMinersData(lotus, head, prevHead, filrepMiners)
+      this.emit(ServiceEvent.NewMiners);
+    } catch (error) {
+      logger.error(error);
+    }
   }
 
   private async getMinersData(lotus: Lotus, head: TipSet, prevHead: TipSet, miners: FilRepMiner[]) {
