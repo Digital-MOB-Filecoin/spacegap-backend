@@ -7,7 +7,6 @@ import {
   setMinerData,
   setFilRepMiners, MongoDbRepository
 } from "../adapters/database";
-import {Filfox} from "../adapters/filfox";
 import {computeEconomics} from "./economics";
 import EventEmitter from "events";
 import {FilRep, FilRepMiner} from "../adapters/filrep";
@@ -25,32 +24,47 @@ export enum ServiceEvent {
 }
 
 export class Service extends EventEmitter {
+  lotus: Lotus;
+
   public async run() {
     while(true) {
-      await this.getData();
+      await this.getDataRace();
       await this.wait(10);
     }
   }
 
+  private async getDataRace() {
+    const start = process.hrtime()
+    await Promise.race([this.getData(), this.wait(300)]);
+    const end = process.hrtime(start);
+    logger.info(`getData duration: ${end[0]}s ${end[1] / 1000000}ms`)
+  }
+
+
   private async getData() {
     try {
-      const lotus = new Lotus()
+      if (this.lotus) {
+        await this.lotus.release();
+        this.lotus = undefined;
+      }
 
-      const head = await lotus.getHead();
-      const prevHead = await lotus.getLast24hHead(head);
+      this.lotus = new Lotus()
+
+      const head = await this.lotus.getHead();
+      const prevHead = await this.lotus.getLast24hHead(head);
       setHead(head)
       this.emit(ServiceEvent.NewHead);
 
-      const gasService = new GasService(head, lotus);
+      const gasService = new GasService(head, this.lotus);
       await gasService.initStats();
       await gasService.growth();
       await gasService.biggestUsers()
       await gasService.usage();
       this.emit(ServiceEvent.NewGas);
 
-      const genesisActors = await lotus.getGenesisActors(head)
+      const genesisActors = await this.lotus.getGenesisActors(head)
       await setGenesisActors(genesisActors)
-      await setLast24hActors(await lotus.getGenesisActors(prevHead))
+      await setLast24hActors(await this.lotus.getGenesisActors(prevHead))
       this.emit(ServiceEvent.NewActors);
 
       const economics = computeEconomics(head, genesisActors, { projectedDays: 1 })
@@ -59,8 +73,12 @@ export class Service extends EventEmitter {
 
       const filrepMiners = await FilRep.getMiners();
       await setFilRepMiners(filrepMiners)
-      await this.getMinersData(lotus, head, prevHead, filrepMiners)
+      await this.getMinersData(this.lotus, head, prevHead, filrepMiners)
       this.emit(ServiceEvent.NewMiners);
+
+      await this.lotus.release();
+      this.lotus = undefined;
+      return true;
     } catch (error) {
       logger.error(error);
     }
