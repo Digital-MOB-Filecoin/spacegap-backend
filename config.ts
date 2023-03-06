@@ -5,6 +5,7 @@ export type ApplicationConfig = {
   },
   app: {
     port: number,
+    filecoinRpcUrl: string,
   }
 }
 
@@ -15,5 +16,6 @@ export const config: ApplicationConfig =  {
   },
   app: {
     port: parseInt(process.env.PORT),
+    filecoinRpcUrl: process.env.FILECOIN_RPC_URL,
   }
 }

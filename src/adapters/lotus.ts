@@ -5,6 +5,8 @@ import {buildObject, bytesToBig} from "../hamt";
 import Big from "big.js";
 import asyncPool from 'tiny-async-pool'
 import bx from 'base-x'
+import { config } from '../../config'
+
 const BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 const b64 = bx(BASE64)
 
@@ -31,7 +33,7 @@ export class Lotus {
 
   public constructor() {
     this.client = new LotusClient(new WsJsonRpcConnector({
-      url: 'wss://node.glif.io/space07/lotus/rpc/v0',
+      url: config.app.filecoinRpcUrl,
     }))
 
   }
